@@ -205,7 +205,7 @@ class RecipientModal(discord.ui.Modal):
     def __init__(self, sender_profile):
         super().__init__(title="Who do you want to send to?")
         self.sender_profile = sender_profile
-        self.recipient_input = discord.ui.InputText(
+        self.recipient_input = discord.ui.TextInput(
             label="Recipient username (in-game)",
             placeholder="e.g. vegmerisa",
             min_length=1,
@@ -213,7 +213,7 @@ class RecipientModal(discord.ui.Modal):
         )
         self.add_item(self.recipient_input)
 
-    async def callback(self, interaction: discord.Interaction):
+    async def on_submit(self, interaction: discord.Interaction):
         recipient_name = self.recipient_input.value.strip()
 
         # Find recipient by username
@@ -338,7 +338,7 @@ class ItemSelect(discord.ui.Select):
         ]
         super().__init__(placeholder="Select an item...", options=options[:25])
 
-    async def callback(self, interaction: discord.Interaction):
+    async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.send_modal(
             QuantityModal(self.view.sender_profile, self.receiver_profile, self.values[0])
         )
@@ -357,10 +357,10 @@ class QuantityModal(discord.ui.Modal):
         self.sender_profile   = sender_profile
         self.receiver_profile = receiver_profile
         self.item_type        = item_type
-        self.qty_input = discord.ui.InputText(label="Quantity", placeholder="e.g. 1", min_length=1, max_length=5)
+        self.qty_input = discord.ui.TextInput(label="Quantity", placeholder="e.g. 1", min_length=1, max_length=5)
         self.add_item(self.qty_input)
 
-    async def callback(self, interaction: discord.Interaction):
+    async def on_submit(self, interaction: discord.Interaction):
         try:
             qty = int(self.qty_input.value)
             if qty < 1: raise ValueError
