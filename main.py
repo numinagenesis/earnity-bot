@@ -598,12 +598,127 @@ async def auto_sync():
     print(f"[Sync] Done. Synced {count} members.")
 
 
+
+# ── WAR LOG ──────────────────────────────────────────────
+WAR_LOG_CHANNEL_ID = 1500126913518374962
+last_attack_time = None
+
+WEAPON_EMOJIS = {
+    "nuke":  "💣 Nuke",
+    "drain": "🌀 Drain",
+    "rug":   "🪤 Rug",
+}
+
+EFFECT_LABELS = {
+    "nuke":  "HP Damage",
+    "drain": "Coins Drained",
+    "rug":   "Coins Stolen",
+}
+
+def fetch_new_attacks(since: str) -> list:
+    try:
+        data = sb_get("guild_attacks", {
+            "select": "id,attacker_id,attacker_guild_id,target_guild_id,item_type,mp_cost,effect_value,created_at",
+            "created_at": f"gt.{since}",
+            "order": "created_at.asc",
+            "limit": 20
+        })
+        return data if isinstance(data, list) else []
+    except Exception:
+        return []
+
+def fetch_guild_name(guild_id: str) -> str:
+    if not guild_id:
+        return "Unknown"
+    try:
+        data = sb_get("guilds", {
+            "id": f"eq.{guild_id}",
+            "select": "name",
+            "limit": 1
+        })
+        return data[0]["name"] if data else "Unknown"
+    except Exception:
+        return "Unknown"
+
+def fetch_username(user_id: str) -> str:
+    if not user_id:
+        return "Unknown"
+    try:
+        data = sb_get("profiles", {
+            "id": f"eq.{user_id}",
+            "select": "username",
+            "limit": 1
+        })
+        return data[0]["username"] if data else "Unknown"
+    except Exception:
+        return "Unknown"
+
+@tasks.loop(seconds=60)
+async def war_log_sync():
+    global last_attack_time
+
+    channel = bot.get_channel(WAR_LOG_CHANNEL_ID)
+    if not channel:
+        return
+
+    # First run — just set the timestamp, don't post old attacks
+    if last_attack_time is None:
+        try:
+            data = sb_get("guild_attacks", {
+                "select": "created_at",
+                "order": "created_at.desc",
+                "limit": 1
+            })
+            last_attack_time = data[0]["created_at"] if data else "2026-01-01T00:00:00+00:00"
+        except Exception:
+            last_attack_time = "2026-01-01T00:00:00+00:00"
+        return
+
+    attacks = fetch_new_attacks(last_attack_time)
+    if not attacks:
+        return
+
+    for attack in attacks:
+        item_type   = attack.get("item_type", "unknown")
+        effect      = attack.get("effect_value", 0)
+        mp_cost     = attack.get("mp_cost", 0)
+        attacker_id = attack.get("attacker_id")
+        attacker_guild_id = attack.get("attacker_guild_id")
+        target_guild_id   = attack.get("target_guild_id")
+
+        attacker_name      = fetch_username(attacker_id)
+        attacker_guild     = fetch_guild_name(attacker_guild_id)
+        target_guild       = fetch_guild_name(target_guild_id)
+        weapon_label       = WEAPON_EMOJIS.get(item_type, f"⚔️ {item_type.title()}")
+        effect_label       = EFFECT_LABELS.get(item_type, "Effect")
+
+        embed = discord.Embed(
+            title="⚔️ WAR ATTACK",
+            color=0xff3333
+        )
+        embed.add_field(name="👤 Attacker", value=attacker_name, inline=True)
+        embed.add_field(name="🏴 Guild", value=attacker_guild, inline=True)
+        embed.add_field(name="​", value="​", inline=True)
+        embed.add_field(name="🎯 Target Guild", value=target_guild, inline=True)
+        embed.add_field(name="💣 Weapon", value=weapon_label, inline=True)
+        embed.add_field(name="​", value="​", inline=True)
+        embed.add_field(name=f"💥 {effect_label}", value=f"{effect:,}", inline=True)
+        embed.add_field(name="⚡ MP Cost", value=str(mp_cost), inline=True)
+        embed.set_footer(text=f"Earnity War Log ︱ {attack['created_at'][:16].replace('T', ' ')} UTC")
+
+        await channel.send(embed=embed)
+        await asyncio.sleep(0.5)
+
+    # Update last seen time
+    last_attack_time = attacks[-1]["created_at"]
+
 # ── EVENTS ───────────────────────────────────────────────
 @bot.event
 async def on_ready():
     print(f"✅ Bot online as {bot.user}")
     print("[Info] Use /syncall to sync manually. Auto-sync runs every 6h after first /syncall.")
     bot.add_view(TransferStartView())
+    war_log_sync.start()
 
 
 @bot.event
