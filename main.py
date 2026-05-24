@@ -419,7 +419,10 @@ async def syncall(interaction: discord.Interaction):
             failed += 1
     if not auto_sync.is_running():
         auto_sync.start()
-    await interaction.followup.send(f"✅ Synced **{count}** members. Failed: **{failed}**", ephemeral=True)
+    try:
+        await interaction.followup.send(f"✅ Synced **{count}** members. Failed: **{failed}**", ephemeral=True)
+    except Exception:
+        print(f"[Sync] Done. Synced {count} members. Failed: {failed}")
 
 
 @bot.tree.command(name="whois", description="[Admin] Check a member's game profile")
