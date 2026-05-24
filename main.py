@@ -74,7 +74,7 @@ def fetch_player(discord_id: str):
     try:
         data = sb_get("profiles", {
             "discord_id": f"eq.{discord_id}",
-            "select": "id,username,contribution_score,guild_id,guilds!fk_profiles_guild(id,name,guild_master_id)",
+            "select": "id,username,discord_id,contribution_score,guild_id,guilds!fk_profiles_guild(id,name,guild_master_id)",
             "limit": 1
         })
         return data[0] if data else None
@@ -338,7 +338,7 @@ class ItemSelect(discord.ui.Select):
         ]
         super().__init__(placeholder="Select an item...", options=options[:25])
 
-    async def on_submit(self, interaction: discord.Interaction):
+    async def callback(self, interaction: discord.Interaction):
         await interaction.response.send_modal(
             QuantityModal(self.view.sender_profile, self.receiver_profile, self.values[0])
         )
