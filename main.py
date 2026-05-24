@@ -299,9 +299,7 @@ class TransferConfirmView(discord.ui.View):
         if str(interaction.user.id) != self.sender_profile.get("discord_id"):
             await interaction.response.send_message("❌ Only the sender can confirm.", ephemeral=True)
             return
-        for child in self.children:
-            child.disabled = True
-        await interaction.message.edit(view=self)
+        await interaction.response.defer(ephemeral=True)
         result = call_transfer(self.sender_profile["id"], self.receiver_profile["id"], self.item_type, self.quantity)
         if result.get("success"):
             embed = discord.Embed(title="✅ Transfer Complete", color=0x00ff88)
@@ -311,18 +309,15 @@ class TransferConfirmView(discord.ui.View):
             embed.add_field(name="To", value=self.receiver_profile["username"], inline=True)
             embed.add_field(name="Remaining", value=str(result.get("sender_remaining", 0)), inline=True)
             embed.set_footer(text="Earnity ︱ Item Transfer")
-            await interaction.response.send_message(embed=embed)
+            await interaction.followup.send(embed=embed, ephemeral=True)
         else:
-            await interaction.response.send_message(f"❌ {result.get('message', 'Transfer failed')}", ephemeral=True)
+            await interaction.followup.send(f"❌ {result.get('message', 'Transfer failed')}", ephemeral=True)
 
     @discord.ui.button(label="❌ Cancel", style=discord.ButtonStyle.danger)
     async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
         if str(interaction.user.id) != self.sender_profile.get("discord_id"):
             await interaction.response.send_message("❌ Only the sender can cancel.", ephemeral=True)
             return
-        for child in self.children:
-            child.disabled = True
-        await interaction.message.edit(view=self)
         await interaction.response.send_message("❌ Transfer cancelled.", ephemeral=True)
 
 
