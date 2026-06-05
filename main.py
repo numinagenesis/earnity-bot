@@ -381,9 +381,12 @@ async def verify(interaction: discord.Interaction):
     discord_id = str(interaction.user.id)
     player = fetch_player(discord_id)
     if not player:
+        e_rank = interaction.guild.get_role(1500122986206855198)
+        if e_rank:
+            await interaction.user.add_roles(e_rank)
         await interaction.followup.send(
-            "❌ **Account not linked.**\n\nYour Discord isn't connected to a game profile.\n"
-            "Go to earnity.fun → Login with Discord, then try again.",
+            "✅ **Verified!** You've been given **E-Rank**.\n\n"
+            "To unlock guild channels and higher ranks, join the game at earnity.fun",
             ephemeral=True
         )
         return
